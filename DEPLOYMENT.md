@@ -1,78 +1,87 @@
-# Guía de Despliegue (Render & Vercel)
+# Guía de Despliegue (Deployment Guide)
 
-Esta guía te ayudará a subir tu proyecto a producción.
+Esta guía te ayudará a desplegar tu aplicación BotSpotSASD en **Render** (Backend y Bot) y **Vercel** (Frontend), utilizando los planes gratuitos.
 
-## 1. Preparación (GitHub)
+## Prerrequisitos
 
-Asegúrate de que todo tu código esté subido a un repositorio de GitHub.
-1. Crea un repositorio en GitHub.
-2. Sube todo el contenido de la carpeta `BotSpotSASD`.
+1.  Cuenta en [GitHub](https://github.com).
+2.  Cuenta en [Render](https://render.com).
+3.  Cuenta en [Vercel](https://vercel.com).
+4.  Base de datos PostgreSQL en [Supabase](https://supabase.com) (ya configurada).
 
-## 2. Desplegar el Backend y el Bot en Render
+---
 
-Render alojará tanto tu servidor web (API) como tu bot de Discord.
+## 1. Preparación del Repositorio
 
-### 2.1 Crear el Web Service (Backend API)
-1. Ve a [dashboard.render.com](https://dashboard.render.com/).
-2. Click en **New +** -> **Web Service**.
-3. Conecta tu repositorio de GitHub.
-4. Configura lo siguiente:
-   - **Name:** `botspotsasd-api` (o el nombre que quieras)
-   - **Root Directory:** `web`
-   - **Runtime:** Node
-   - **Build Command:** `npm install && npm run build:server`
-   - **Start Command:** `npm start`
-5. **Environment Variables (Variables de Entorno):**
-   Copia las variables de tu archivo `web/.env`, PERO actualiza las siguientes:
-   - `DATABASE_URL`: La URL de Supabase (`postgresql://...`).
-   - `FRONTEND_URL`: La URL que te dará Vercel (ej: `https://botspotsasd.vercel.app`). *Puedes poner un valor temporal y actualizarlo después de desplegar el frontend.*
-   - `DISCORD_REDIRECT_URI`: `https://[TU-URL-DE-RENDER].onrender.com/api/auth/callback` *(Actualiza esto una vez Render te asigne la URL)*.
-   - `PORT`: `10000` (Render usa este puerto por defecto).
+Asegúrate de que tu código esté subido a un repositorio de GitHub.
 
-### 2.2 Crear el Background Worker (Discord Bot)
-1. Click en **New +** -> **Background Worker**.
-2. Conecta el mismo repositorio.
-3. Configura lo siguiente:
-   - **Name:** `botspotsasd-bot`
-   - **Root Directory:** `bot`
-   - **Runtime:** Node
-   - **Build Command:** `npm install && npm run build`
-   - **Start Command:** `npm start`
-4. **Environment Variables:**
-   Copia las variables de tu archivo `bot/.env`:
-   - `DISCORD_TOKEN`
-   - `DISCORD_CLIENT_ID`
-   - `DATABASE_URL` (La misma de Supabase)
-   - `BOT_PREFIX`
+## 2. Despliegue del Backend (API) en Render
 
-## 3. Desplegar el Frontend en Vercel
+El Backend es el servidor Express que maneja la API del dashboard.
 
-Vercel alojará tu página web (React).
+1.  Ve a tu Dashboard de Render y haz clic en **New +** -> **Web Service**.
+2.  Conecta tu repositorio de GitHub.
+3.  Configura el servicio con los siguientes datos:
+    *   **Name:** `botspotsasd-api` (o el nombre que prefieras)
+    *   **Root Directory:** `web`
+    *   **Environment:** `Node`
+    *   **Build Command:** `npm install && npm run build:server`
+    *   **Start Command:** `npm start`
+    *   **Plan:** Free
+4.  En la sección **Environment Variables**, añade las siguientes variables (copia los valores de tu `.env` local):
+    *   `DATABASE_URL`: Tu URL de conexión de Supabase.
+    *   `SESSION_SECRET`: Una cadena secreta larga.
+    *   `DISCORD_CLIENT_ID`: ID de tu aplicación de Discord.
+    *   `DISCORD_CLIENT_SECRET`: Secreto de tu aplicación de Discord.
+    *   `DISCORD_REDIRECT_URI`: `https://<TU-URL-DE-RENDER-API>/api/auth/callback` (Actualizarás esto una vez se cree el servicio).
+    *   `FRONTEND_URL`: `https://<TU-URL-DE-VERCEL>` (Lo actualizarás después de desplegar el frontend).
+    *   `NODE_ENV`: `production`
+5.  Haz clic en **Create Web Service**.
 
-1. Ve a [vercel.com](https://vercel.com/).
-2. Click en **Add New...** -> **Project**.
-3. Importa tu repositorio de GitHub.
-4. Configura lo siguiente:
-   - **Framework Preset:** Vite
-   - **Root Directory:** Click en "Edit" y selecciona `web/client`.
-5. **Environment Variables:**
-   - `VITE_API_URL`: La URL de tu backend en Render (ej: `https://botspotsasd-api.onrender.com`). **Importante: No pongas la barra `/` al final.**
-   - `VITE_DISCORD_CLIENT_ID`: Tu ID de cliente de Discord.
-6. Click en **Deploy**.
+## 3. Despliegue del Bot de Discord en Render
 
-## 4. Configuración Final (Importante)
+Para usar el plan gratuito de Render, desplegaremos el Bot como un **Web Service** en lugar de un Background Worker. Hemos añadido un pequeño servidor HTTP al bot para que cumpla con los requisitos de Render.
 
-Una vez tengas las URLs definitivas de Render y Vercel:
+1.  Ve a tu Dashboard de Render y haz clic en **New +** -> **Web Service**.
+2.  Conecta el **mismo** repositorio de GitHub.
+3.  Configura el servicio:
+    *   **Name:** `botspotsasd-bot`
+    *   **Root Directory:** `bot`
+    *   **Environment:** `Node`
+    *   **Build Command:** `npm install && npm run build`
+    *   **Start Command:** `npm start`
+    *   **Plan:** Free
+4.  Añade las variables de entorno:
+    *   `DISCORD_TOKEN`: El token de tu bot.
+    *   `DISCORD_CLIENT_ID`: ID de tu aplicación.
+    *   `DATABASE_URL`: La misma URL de Supabase.
+    *   `BOT_PREFIX`: `!` (o el que prefieras).
+    *   `NODE_ENV`: `production`
+5.  Haz clic en **Create Web Service**.
+    *   *Nota: Render asignará automáticamente un puerto (`PORT`) y el bot escuchará en él para mantenerse vivo.*
 
-1. **Actualiza Discord Developer Portal:**
-   - Ve a la sección **OAuth2** -> **Redirects**.
-   - Agrega la URL de redirección de producción: `https://[TU-URL-DE-RENDER].onrender.com/api/auth/callback`
+## 4. Despliegue del Frontend en Vercel
 
-2. **Actualiza Render (Backend):**
-   - Ve a las variables de entorno de tu Web Service.
-   - Actualiza `FRONTEND_URL` con la URL de Vercel (ej: `https://tu-proyecto.vercel.app`).
-   - Actualiza `DISCORD_REDIRECT_URI` con la URL de Render (ej: `https://tu-api.onrender.com/api/auth/callback`).
+1.  Ve a tu Dashboard de Vercel y haz clic en **Add New...** -> **Project**.
+2.  Importa tu repositorio de GitHub.
+3.  Configura el proyecto:
+    *   **Framework Preset:** Vite
+    *   **Root Directory:** Haz clic en `Edit` y selecciona la carpeta `web/client`.
+4.  En **Environment Variables**, añade:
+    *   `VITE_API_URL`: La URL de tu Backend en Render (ej. `https://botspotsasd-api.onrender.com`). **Importante:** No incluyas la barra `/` al final.
+5.  Haz clic en **Deploy**.
 
-3. **Reinicia el servicio en Render** para que tome los cambios.
+## 5. Configuración Final
 
-¡Listo! Tu proyecto debería estar funcionando en producción.
+1.  **Actualizar URLs:**
+    *   Vuelve a Render -> Servicio API -> Environment Variables.
+    *   Actualiza `FRONTEND_URL` con la URL que te dio Vercel (ej. `https://botspotsasd-web.vercel.app`).
+    *   Guarda los cambios.
+2.  **Discord Developer Portal:**
+    *   Ve a [Discord Developers](https://discord.com/developers/applications).
+    *   Selecciona tu aplicación -> **OAuth2**.
+    *   En **Redirects**, añade la URL de callback de tu API en Render: `https://<TU-URL-DE-RENDER-API>/api/auth/callback`.
+3.  **Reiniciar Servicios:**
+    *   En Render, fuerza un nuevo despliegue (Manual Deploy) de tu API para que tome la nueva variable `FRONTEND_URL`.
+
+¡Listo! Tu aplicación completa debería estar funcionando.

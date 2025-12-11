@@ -3,6 +3,18 @@ import { Client, Collection, GatewayIntentBits, REST, Routes } from 'discord.js'
 import { config } from './config';
 import * as fs from 'fs';
 import * as path from 'path';
+import http from 'http';
+
+// Create a simple HTTP server for Render health checks
+const port = process.env.PORT || 3000;
+const server = http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end('Bot is alive!');
+});
+
+server.listen(port, () => {
+  console.log(`🤖 Bot health check server listening on port ${port}`);
+});
 
 // Extend Client type to include commands
 declare module 'discord.js' {
@@ -29,7 +41,7 @@ client.commands = new Collection();
 async function loadCommands() {
   const commands = [];
   const commandsPath = path.join(__dirname, 'commands');
-  const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js') || file.endsWith('.ts'));
+  const commandFiles = fs.readdirSync(commandsPath).filter(file => (file.endsWith('.js') || file.endsWith('.ts')) && !file.endsWith('.d.ts'));
 
   for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
@@ -57,7 +69,7 @@ async function loadCommands() {
 // Load events
 async function loadEvents() {
   const eventsPath = path.join(__dirname, 'events');
-  const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js') || file.endsWith('.ts'));
+  const eventFiles = fs.readdirSync(eventsPath).filter(file => (file.endsWith('.js') || file.endsWith('.ts')) && !file.endsWith('.d.ts'));
 
   for (const file of eventFiles) {
     const filePath = path.join(eventsPath, file);

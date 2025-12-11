@@ -7,6 +7,9 @@ export function getPool(): Pool {
   if (!pool) {
     pool = new Pool({
       connectionString: config.databaseUrl,
+      ssl: {
+        rejectUnauthorized: false
+      }
     });
   }
   return pool;
