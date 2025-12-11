@@ -1,0 +1,1032 @@
+PROMPT PARA GITHUB COPILOT - BOT DISCORD BOTSPOTSASD
+
+OBJETIVO GENERAL
+
+Implementar un bot de Discord completo con panel web de configuración llamado BotSpotSASD que permita a los administradores gestionar automoderación, formularios, roles, moderación y bienvenida de forma amigable.
+
+
+
+
+ARQUITECTURA TÉCNICA
+
+Stack Tecnológico
+
+•
+Bot Discord: Node.js + discord.js v14
+
+•
+Backend Web: Express.js + TypeScript
+
+•
+Frontend Web: React 19 + Tailwind CSS + shadcn/ui
+
+•
+Base de Datos: MySQL (Supabase o similar)
+
+•
+ORM: Drizzle ORM
+
+•
+Autenticación: OAuth2 Discord
+
+•
+Hosting: Render (bot + backend) + Vercel (frontend)
+
+Estructura de Carpetas
+
+Plain Text
+
+
+BotSpotSASD/
+├── bot/                          # Bot de Discord
+│   ├── src/
+│   │   ├── index.ts             # Punto de entrada del bot
+│   │   ├── config.ts            # Configuración y variables de entorno
+│   │   ├── commands/            # Comandos del bot
+│   │   │   ├── moderation.ts    # warns, bans, kicks
+│   │   │   ├── roles.ts         # Asignación de roles
+│   │   │   └── forms.ts         # Gestión de formularios
+│   │   ├── events/              # Eventos del bot
+│   │   │   ├── ready.ts         # Bot listo
+│   │   │   ├── guildMemberAdd.ts # Bienvenida
+│   │   │   ├── messageCreate.ts # Automoderación
+│   │   │   └── interactionCreate.ts # Botones/Select menus
+│   │   ├── handlers/            # Lógica de negocio
+│   │   │   ├── automod.ts       # Automoderación
+│   │   │   ├── welcome.ts       # Bienvenida
+│   │   │   ├── forms.ts         # Formularios
+│   │   │   └── moderation.ts    # Moderación
+│   │   ├── utils/
+│   │   │   ├── database.ts      # Conexión a BD
+│   │   │   ├── discord.ts       # Utilidades de Discord
+│   │   │   └── validation.ts    # Validaciones
+│   │   └── types/
+│   │       └── index.ts         # Tipos TypeScript
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── .env.example
+│
+├── web/                          # Panel web (React + Express)
+│   ├── server/
+│   │   ├── index.ts             # Servidor Express
+│   │   ├── routes/
+│   │   │   ├── auth.ts          # Autenticación OAuth2
+│   │   │   ├── guilds.ts        # Gestión de servidores
+│   │   │   ├── welcome.ts       # Configuración de bienvenida
+│   │   │   ├── automod.ts       # Configuración de automoderación
+│   │   │   ├── roles.ts         # Configuración de roles
+│   │   │   ├── forms.ts         # Gestión de formularios
+│   │   │   ├── moderation.ts    # Gestión de moderación
+│   │   │   └── submissions.ts   # Envíos de formularios
+│   │   ├── middleware/
+│   │   │   ├── auth.ts          # Verificación de autenticación
+│   │   │   └── permissions.ts   # Verificación de permisos
+│   │   └── utils/
+│   │       └── database.ts      # Queries a BD
+│   │
+│   ├── client/
+│   │   ├── src/
+│   │   │   ├── pages/
+│   │   │   │   ├── Dashboard.tsx
+│   │   │   │   ├── Welcome.tsx
+│   │   │   │   ├── Automod.tsx
+│   │   │   │   ├── Roles.tsx
+│   │   │   │   ├── Forms.tsx
+│   │   │   │   ├── Moderation.tsx
+│   │   │   │   └── Submissions.tsx
+│   │   │   ├── components/
+│   │   │   │   ├── Navbar.tsx
+│   │   │   │   ├── Sidebar.tsx
+│   │   │   │   ├── FormBuilder.tsx
+│   │   │   │   ├── SubmissionReview.tsx
+│   │   │   │   └── LanguageSwitcher.tsx
+│   │   │   ├── hooks/
+│   │   │   │   ├── useAuth.ts
+│   │   │   │   └── useGuild.ts
+│   │   │   ├── contexts/
+│   │   │   │   ├── AuthContext.tsx
+│   │   │   │   └── ThemeContext.tsx
+│   │   │   ├── App.tsx
+│   │   │   └── main.tsx
+│   │   └── package.json
+│   │
+│   ├── drizzle/
+│   │   └── schema.ts            # Esquema de BD
+│   │
+│   └── package.json
+│
+└── README.md
+
+
+
+
+
+ESQUEMA DE BASE DE DATOS
+
+Tablas Principales
+
+1. guilds - Configuración de servidores
+
+SQL
+
+
+CREATE TABLE guilds (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  guildId VARCHAR(64) NOT NULL UNIQUE,
+  guildName VARCHAR(255) NOT NULL,
+  ownerId VARCHAR(64) NOT NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+2. welcomeConfigs - Configuración de bienvenida
+
+SQL
+
+
+CREATE TABLE welcomeConfigs (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  guildId VARCHAR(64) NOT NULL UNIQUE,
+  enabled BOOLEAN DEFAULT TRUE,
+  channelId VARCHAR(64),
+  message TEXT,
+  imageUrl TEXT,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+3. automodConfigs - Configuración de automoderación
+
+SQL
+
+
+CREATE TABLE automodConfigs (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  guildId VARCHAR(64) NOT NULL UNIQUE,
+  enabled BOOLEAN DEFAULT TRUE,
+  antiSpam BOOLEAN DEFAULT TRUE,
+  bannedWords TEXT,           -- JSON: ["word1", "word2"]
+  bannedLinks TEXT,           -- JSON: ["domain1.com", "domain2.com"]
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+4. userModerations - Historial de moderación
+
+SQL
+
+
+CREATE TABLE userModerations (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  guildId VARCHAR(64) NOT NULL,
+  userId VARCHAR(64) NOT NULL,
+  type ENUM('warn', 'ban', 'kick') NOT NULL,
+  reason TEXT,
+  moderatorId VARCHAR(64) NOT NULL,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+5. forms - Definición de formularios
+
+SQL
+
+
+CREATE TABLE forms (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  guildId VARCHAR(64) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  fields TEXT NOT NULL,       -- JSON: [{"name": "field1", "type": "text", "required": true}]
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+6. formSubmissions - Envíos de formularios
+
+SQL
+
+
+CREATE TABLE formSubmissions (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  formId INT NOT NULL,
+  guildId VARCHAR(64) NOT NULL,
+  userId VARCHAR(64) NOT NULL,
+  data TEXT NOT NULL,         -- JSON: {"field1": "value1", "field2": "value2"}
+  status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+  reviewedBy VARCHAR(64),
+  reviewedAt TIMESTAMP,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+7. roleConfigs - Configuración de roles
+
+SQL
+
+
+CREATE TABLE roleConfigs (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  guildId VARCHAR(64) NOT NULL,
+  roleId VARCHAR(64) NOT NULL,
+  autoAssign BOOLEAN DEFAULT FALSE,
+  requiresVerification BOOLEAN DEFAULT FALSE,
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+
+8. userRoles - Asignación de roles a usuarios
+
+SQL
+
+
+CREATE TABLE userRoles (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  guildId VARCHAR(64) NOT NULL,
+  userId VARCHAR(64) NOT NULL,
+  roleId VARCHAR(64) NOT NULL,
+  assignedBy VARCHAR(64),
+  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+
+
+
+FUNCIONALIDADES PRINCIPALES
+
+1. SISTEMA DE BIENVENIDA
+
+Descripción: Enviar un mensaje personalizado cuando un usuario se une al servidor.
+
+Componentes:
+
+•
+Evento guildMemberAdd en Discord
+
+•
+Tabla welcomeConfigs
+
+•
+Página web para editar mensaje y canal
+
+•
+Soporte para variables: {user}, {server}, {memberCount}
+
+Implementación:
+
+TypeScript
+
+
+// bot/src/events/guildMemberAdd.ts
+// 1. Obtener configuración de bienvenida desde BD
+// 2. Reemplazar variables en el mensaje
+// 3. Enviar mensaje al canal configurado
+// 4. Opcionalmente: asignar rol automático si está configurado
+
+
+Endpoint Web:
+
+•
+GET /api/guilds/:guildId/welcome - Obtener configuración
+
+•
+POST /api/guilds/:guildId/welcome - Actualizar configuración
+
+
+
+
+2. SISTEMA DE FORMULARIOS REVISABLES
+
+Descripción: Crear formularios personalizados que los usuarios envían y los admins aprueban/rechazan.
+
+Componentes:
+
+•
+Tabla forms - Define estructura del formulario
+
+•
+Tabla formSubmissions - Almacena envíos
+
+•
+Comandos Discord para enviar formularios
+
+•
+Página web para crear/editar formularios
+
+•
+Página web para revisar envíos (aprobar/rechazar)
+
+•
+Notificaciones en Discord cuando se aprueba/rechaza
+
+Implementación:
+
+TypeScript
+
+
+// bot/src/commands/forms.ts
+// 1. Comando: /form submit <formId>
+//    - Mostrar modal con campos del formulario
+//    - Guardar envío en BD con status 'pending'
+//    - Notificar a admins
+
+// 2. Botones de aprobación/rechazo en Discord
+//    - Cuando admin aprueba: actualizar status, ejecutar acción (ej: asignar rol)
+//    - Cuando admin rechaza: actualizar status, enviar DM al usuario
+
+// web/server/routes/forms.ts
+// 1. GET /api/guilds/:guildId/forms - Listar formularios
+// 2. POST /api/guilds/:guildId/forms - Crear formulario
+// 3. PUT /api/guilds/:guildId/forms/:formId - Editar formulario
+// 4. DELETE /api/guilds/:guildId/forms/:formId - Eliminar formulario
+// 5. GET /api/guilds/:guildId/submissions - Listar envíos pendientes
+// 6. POST /api/submissions/:submissionId/approve - Aprobar
+// 7. POST /api/submissions/:submissionId/reject - Rechazar
+
+
+
+
+
+3. SISTEMA DE MODERACIÓN (WARNS, BANS, KICKS)
+
+Descripción: Registrar infracciones de usuarios y aplicar sanciones.
+
+Componentes:
+
+•
+Tabla userModerations
+
+•
+Comandos Discord: /warn, /ban, /kick
+
+•
+Página web para ver historial y aplicar sanciones
+
+•
+Sistema de escalada: 3 warns = ban automático
+
+Implementación:
+
+TypeScript
+
+
+// bot/src/commands/moderation.ts
+// 1. /warn <user> <reason> - Agregar warn
+// 2. /ban <user> <reason> - Banear usuario
+// 3. /kick <user> <reason> - Expulsar usuario
+// 4. /warns <user> - Ver warns de un usuario
+
+// bot/src/handlers/moderation.ts
+// - Lógica para registrar infracciones
+// - Lógica para escalada automática (3 warns = ban)
+// - Enviar notificaciones
+
+// web/server/routes/moderation.ts
+// 1. GET /api/guilds/:guildId/users/:userId/moderation - Ver historial
+// 2. GET /api/guilds/:guildId/moderation - Ver todas las infracciones
+// 3. POST /api/guilds/:guildId/warn - Agregar warn desde web
+// 4. POST /api/guilds/:guildId/ban - Banear desde web
+// 5. POST /api/guilds/:guildId/kick - Expulsar desde web
+
+
+
+
+
+4. AUTOMODERACIÓN
+
+Descripción: Detectar y eliminar mensajes spam, palabras prohibidas, enlaces maliciosos.
+
+Componentes:
+
+•
+Tabla automodConfigs
+
+•
+Evento messageCreate en Discord
+
+•
+Página web para configurar palabras prohibidas y dominios bloqueados
+
+Implementación:
+
+TypeScript
+
+
+// bot/src/events/messageCreate.ts
+// 1. Verificar si automoderación está habilitada
+// 2. Detectar spam (múltiples mensajes rápidos)
+// 3. Detectar palabras prohibidas
+// 4. Detectar enlaces no permitidos
+// 5. Eliminar mensaje y avisar al usuario
+// 6. Registrar infracción automática (warn)
+
+// bot/src/handlers/automod.ts
+// - Funciones de detección
+// - Funciones de eliminación de mensajes
+// - Funciones de registro de infracciones
+
+// web/server/routes/automod.ts
+// 1. GET /api/guilds/:guildId/automod - Obtener configuración
+// 2. POST /api/guilds/:guildId/automod - Actualizar configuración
+// 3. POST /api/guilds/:guildId/automod/words - Agregar palabra prohibida
+// 4. DELETE /api/guilds/:guildId/automod/words/:wordId - Eliminar palabra
+// 5. POST /api/guilds/:guildId/automod/links - Agregar dominio bloqueado
+// 6. DELETE /api/guilds/:guildId/automod/links/:linkId - Eliminar dominio
+
+
+
+
+
+5. AUTOASIGNACIÓN DE ROLES
+
+Descripción: Asignar roles automáticamente a nuevos usuarios o basado en reacciones.
+
+Componentes:
+
+•
+Tabla roleConfigs
+
+•
+Tabla userRoles
+
+•
+Evento guildMemberAdd en Discord
+
+•
+Evento messageReactionAdd en Discord (opcional)
+
+•
+Página web para configurar roles automáticos
+
+Implementación:
+
+TypeScript
+
+
+// bot/src/events/guildMemberAdd.ts
+// 1. Obtener roles configurados con autoAssign = true
+// 2. Asignar roles al nuevo usuario
+// 3. Registrar asignación en userRoles
+
+// bot/src/events/messageReactionAdd.ts (opcional)
+// 1. Detectar reacción en mensaje de roles
+// 2. Asignar rol correspondiente a la reacción
+// 3. Registrar asignación
+
+// web/server/routes/roles.ts
+// 1. GET /api/guilds/:guildId/roles - Listar roles configurables
+// 2. POST /api/guilds/:guildId/roles - Agregar rol a configuración
+// 3. PUT /api/guilds/:guildId/roles/:roleId - Actualizar rol
+// 4. DELETE /api/guilds/:guildId/roles/:roleId - Eliminar rol
+// 5. GET /api/guilds/:guildId/users/:userId/roles - Ver roles de usuario
+
+
+
+
+
+6. VERIFICACIÓN Y ASIGNACIÓN MANUAL DE ROLES
+
+Descripción: Permitir que usuarios se auto-asignen roles o que admins asignen roles manualmente.
+
+Componentes:
+
+•
+Comando Discord: /role add <user> <role>
+
+•
+Página web para asignar roles manualmente
+
+•
+Modal Discord para auto-asignación de roles
+
+Implementación:
+
+TypeScript
+
+
+// bot/src/commands/roles.ts
+// 1. /role add <user> <role> - Asignar rol a usuario
+// 2. /role remove <user> <role> - Remover rol
+// 3. /roles - Mostrar roles disponibles
+
+// bot/src/events/interactionCreate.ts
+// - Manejar botones/select menus para auto-asignación
+
+// web/server/routes/roles.ts
+// 1. POST /api/guilds/:guildId/users/:userId/roles - Asignar rol
+// 2. DELETE /api/guilds/:guildId/users/:userId/roles/:roleId - Remover rol
+
+
+
+
+
+PANEL WEB - CARACTERÍSTICAS
+
+Página de Inicio (Dashboard)
+
+•
+Estadísticas del servidor (miembros, warns, bans, etc.)
+
+•
+Últimos envíos de formularios
+
+•
+Últimas acciones de moderación
+
+•
+Selector de servidor (si el usuario es admin de múltiples servidores)
+
+Página de Configuración de Bienvenida
+
+•
+Editor de mensaje (con vista previa)
+
+•
+Selector de canal
+
+•
+Soporte para variables: {user}, {server}, {memberCount}
+
+•
+Botón para probar mensaje
+
+Página de Gestión de Formularios
+
+•
+Listado de formularios
+
+•
+Constructor de formularios (drag & drop)
+
+•
+Tipos de campos: texto, número, selección, checkbox, etc.
+
+•
+Vista previa del formulario
+
+•
+Botón para eliminar formulario
+
+Página de Revisión de Envíos
+
+•
+Tabla de envíos pendientes
+
+•
+Filtros por estado (pendiente, aprobado, rechazado)
+
+•
+Vista detallada del envío
+
+•
+Botones para aprobar/rechazar
+
+•
+Historial de envíos procesados
+
+Página de Moderación
+
+•
+Tabla de usuarios con infracciones
+
+•
+Filtros por tipo (warn, ban, kick)
+
+•
+Historial de acciones
+
+•
+Formulario para agregar warn/ban/kick manualmente
+
+•
+Estadísticas de moderación
+
+Página de Configuración de Roles
+
+•
+Listado de roles del servidor
+
+•
+Checkbox para autoasignación
+
+•
+Checkbox para requerir verificación
+
+•
+Botón para eliminar rol de configuración
+
+Página de Automoderación
+
+•
+Toggle para habilitar/deshabilitar
+
+•
+Toggle para anti-spam
+
+•
+Campo para agregar palabras prohibidas
+
+•
+Campo para agregar dominios bloqueados
+
+•
+Listado de palabras/dominios configurados
+
+
+
+
+AUTENTICACIÓN Y PERMISOS
+
+Flujo de Autenticación
+
+1.
+Usuario hace clic en "Iniciar sesión con Discord"
+
+2.
+Redirigir a OAuth2 de Discord
+
+3.
+Discord redirige con código de autorización
+
+4.
+Backend intercambia código por token de acceso
+
+5.
+Backend obtiene información del usuario y servidores
+
+6.
+Crear sesión/JWT
+
+7.
+Redirigir a dashboard
+
+Verificación de Permisos
+
+•
+Solo admins del servidor pueden acceder al panel
+
+•
+Verificar permisos en cada endpoint del backend
+
+•
+Middleware de autenticación en todas las rutas protegidas
+
+
+
+
+VARIABLES DE ENTORNO
+
+Bot (.env)
+
+Plain Text
+
+
+DISCORD_TOKEN=<token del bot>
+DISCORD_CLIENT_ID=<client id>
+DISCORD_CLIENT_SECRET=<client secret>
+DATABASE_URL=mysql://user:password@host:port/database
+BOT_PREFIX=!
+NODE_ENV=production
+
+
+Web Backend (.env)
+
+Plain Text
+
+
+DISCORD_CLIENT_ID=<client id>
+DISCORD_CLIENT_SECRET=<client secret>
+DISCORD_REDIRECT_URI=http://localhost:3001/api/auth/callback
+DATABASE_URL=mysql://user:password@host:port/database
+JWT_SECRET=<secret para firmar JWT>
+SESSION_SECRET=<secret para sesiones>
+FRONTEND_URL=http://localhost:5173
+NODE_ENV=production
+
+
+Web Frontend (.env )
+
+Plain Text
+
+
+VITE_API_URL=http://localhost:3001
+VITE_DISCORD_CLIENT_ID=<client id>
+
+
+
+
+
+INSTRUCCIONES DE IMPLEMENTACIÓN
+
+Paso 1: Configuración Inicial
+
+1.
+Crear aplicación en Discord Developer Portal
+
+2.
+Crear base de datos MySQL
+
+3.
+Clonar repositorio
+
+4.
+Instalar dependencias: npm install en bot/ y web/
+
+5.
+Configurar variables de entorno
+
+Paso 2: Implementar Bot
+
+1.
+Crear estructura de carpetas en bot/src/
+
+2.
+Implementar eventos: ready, guildMemberAdd, messageCreate, interactionCreate
+
+3.
+Implementar comandos: moderation, roles, forms
+
+4.
+Implementar handlers: automod, welcome, forms, moderation
+
+5.
+Crear conexión a base de datos
+
+6.
+Iniciar bot: npm run dev
+
+Paso 3: Implementar Backend Web
+
+1.
+Crear servidor Express
+
+2.
+Implementar rutas de autenticación OAuth2
+
+3.
+Implementar rutas para cada funcionalidad (welcome, automod, roles, forms, moderation )
+
+4.
+Implementar middleware de autenticación y permisos
+
+5.
+Iniciar servidor: npm run dev
+
+Paso 4: Implementar Frontend Web
+
+1.
+Crear estructura de carpetas en client/src/
+
+2.
+Implementar páginas: Dashboard, Welcome, Automod, Roles, Forms, Moderation, Submissions
+
+3.
+Implementar componentes reutilizables
+
+4.
+Conectar con API del backend
+
+5.
+Implementar dark mode y multiidioma
+
+6.
+Iniciar frontend: npm run dev
+
+Paso 5: Testing y Deploy
+
+1.
+Probar todas las funcionalidades en desarrollo
+
+2.
+Crear tests unitarios
+
+3.
+Deploy en Render (bot + backend)
+
+4.
+Deploy en Vercel (frontend)
+
+
+
+
+CONSIDERACIONES IMPORTANTES
+
+Seguridad
+
+•
+Validar todos los inputs del usuario
+
+•
+Sanitizar datos antes de guardar en BD
+
+•
+Verificar permisos en cada endpoint
+
+•
+Usar HTTPS en producción
+
+•
+Almacenar tokens de forma segura
+
+Rendimiento
+
+•
+Cachear configuraciones frecuentemente accedidas
+
+•
+Usar índices en la BD para queries frecuentes
+
+•
+Implementar rate limiting en endpoints
+
+•
+Usar lazy loading en frontend
+
+Experiencia del Usuario
+
+•
+Interfaz intuitiva y responsive
+
+•
+Mensajes de error claros
+
+•
+Confirmaciones para acciones destructivas
+
+•
+Dark mode y soporte multiidioma (ES, EN, PT)
+
+•
+Notificaciones en tiempo real (opcional: WebSockets)
+
+Escalabilidad
+
+•
+Usar variables de entorno para configuración
+
+•
+Separar lógica de negocio en handlers
+
+•
+Usar middleware para funcionalidades transversales
+
+•
+Preparar para múltiples servidores
+
+
+
+
+CHECKLIST DE IMPLEMENTACIÓN
+
+
+
+
+Estructura de carpetas creada
+
+
+
+
+Base de datos configurada
+
+
+
+
+Variables de entorno configuradas
+
+
+
+
+Bot conectado a Discord
+
+
+
+
+Evento guildMemberAdd (bienvenida)
+
+
+
+
+Evento messageCreate (automoderación)
+
+
+
+
+Evento interactionCreate (botones/modales)
+
+
+
+
+Comandos de moderación
+
+
+
+
+Comandos de roles
+
+
+
+
+Comandos de formularios
+
+
+
+
+Rutas de autenticación OAuth2
+
+
+
+
+Rutas de bienvenida
+
+
+
+
+Rutas de automoderación
+
+
+
+
+Rutas de roles
+
+
+
+
+Rutas de formularios
+
+
+
+
+Rutas de moderación
+
+
+
+
+Página Dashboard
+
+
+
+
+Página Bienvenida
+
+
+
+
+Página Automoderación
+
+
+
+
+Página Roles
+
+
+
+
+Página Formularios
+
+
+
+
+Página Moderación
+
+
+
+
+Página Envíos de Formularios
+
+
+
+
+Dark mode
+
+
+
+
+Multiidioma (ES, EN, PT)
+
+
+
+
+Tests unitarios
+
+
+
+
+Documentación
+
+
+
+
+Deploy en Render
+
+
+
+
+Deploy en Vercel
+
