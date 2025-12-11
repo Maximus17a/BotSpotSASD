@@ -40,115 +40,21 @@
    - Use Slash Commands
 4. Copia la URL generada e invita el bot a tu servidor
 
-## Paso 2: Configurar MySQL
+## Paso 2: Configurar Base de Datos (Supabase / PostgreSQL)
 
-### Opción A: Local (Windows)
+Este proyecto utiliza **PostgreSQL**. Recomendamos usar **Supabase** por su facilidad de uso.
 
-1. Descarga MySQL Community Server desde https://dev.mysql.com/downloads/mysql/
-2. Instala con las opciones por defecto
-3. Configura una contraseña para el usuario `root`
-4. Abre MySQL Workbench o cualquier cliente MySQL
-5. Ejecuta:
+1. Ve a https://supabase.com y crea una cuenta.
+2. Crea un nuevo proyecto.
+3. Ve a **Project Settings** → **Database** → **Connection String** → **URI**.
+4. Copia la cadena de conexión. Debería verse así:
+   `postgresql://postgres:[TU_PASSWORD]@db.[TU_PROYECTO].supabase.co:5432/postgres`
+   *(Recuerda reemplazar `[TU_PASSWORD]` con la contraseña que creaste para la base de datos)*.
 
-```sql
-CREATE DATABASE botspotsasd CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE botspotsasd;
-```
-
-6. Copia y ejecuta el esquema de `web/drizzle/schema.ts` convertido a SQL:
-
-```sql
-CREATE TABLE guilds (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  guildId VARCHAR(64) NOT NULL UNIQUE,
-  guildName VARCHAR(255) NOT NULL,
-  ownerId VARCHAR(64) NOT NULL,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE welcomeConfigs (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  guildId VARCHAR(64) NOT NULL UNIQUE,
-  enabled BOOLEAN DEFAULT TRUE,
-  channelId VARCHAR(64),
-  message TEXT,
-  imageUrl TEXT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE automodConfigs (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  guildId VARCHAR(64) NOT NULL UNIQUE,
-  enabled BOOLEAN DEFAULT TRUE,
-  antiSpam BOOLEAN DEFAULT TRUE,
-  bannedWords TEXT,
-  bannedLinks TEXT,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE userModerations (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  guildId VARCHAR(64) NOT NULL,
-  userId VARCHAR(64) NOT NULL,
-  type ENUM('warn', 'ban', 'kick') NOT NULL,
-  reason TEXT,
-  moderatorId VARCHAR(64) NOT NULL,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE forms (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  guildId VARCHAR(64) NOT NULL,
-  name VARCHAR(255) NOT NULL,
-  description TEXT,
-  fields TEXT NOT NULL,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE formSubmissions (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  formId INT NOT NULL,
-  guildId VARCHAR(64) NOT NULL,
-  userId VARCHAR(64) NOT NULL,
-  data TEXT NOT NULL,
-  status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-  reviewedBy VARCHAR(64),
-  reviewedAt TIMESTAMP,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE roleConfigs (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  guildId VARCHAR(64) NOT NULL,
-  roleId VARCHAR(64) NOT NULL,
-  autoAssign BOOLEAN DEFAULT FALSE,
-  requiresVerification BOOLEAN DEFAULT FALSE,
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
-CREATE TABLE userRoles (
-  id INT PRIMARY KEY AUTO_INCREMENT,
-  guildId VARCHAR(64) NOT NULL,
-  userId VARCHAR(64) NOT NULL,
-  roleId VARCHAR(64) NOT NULL,
-  assignedBy VARCHAR(64),
-  createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Opción B: Cloud (Supabase)
-
-1. Ve a https://supabase.com y crea una cuenta
-2. Crea un nuevo proyecto
-3. Ve a "Database" → "Connection String"
-4. Copia la cadena de conexión (formato MySQL)
-5. Usa el SQL Editor para ejecutar el esquema anterior
+5. Ve al **SQL Editor** en Supabase.
+6. Abre el archivo `database_postgres.sql` que se encuentra en la raíz de este proyecto.
+7. Copia todo su contenido y pégalo en el SQL Editor de Supabase.
+8. Ejecuta el script para crear todas las tablas necesarias.
 
 ## Paso 3: Instalar Node.js y Dependencias
 
@@ -165,14 +71,14 @@ npm --version
 ### 3.2 Instalar Dependencias del Bot
 
 ```powershell
-cd C:\Users\Usuario\Downloads\BotSpotSASD\bot
+cd bot
 npm install
 ```
 
 ### 3.3 Instalar Dependencias del Backend
 
 ```powershell
-cd ..\web
+cd ../web
 npm install
 ```
 
@@ -188,17 +94,17 @@ npm install
 ### 4.1 Bot
 
 ```powershell
-cd C:\Users\Usuario\Downloads\BotSpotSASD\bot
+cd ../../bot
 copy .env.example .env
 ```
 
 Edita `bot/.env`:
 
-```
+```env
 DISCORD_TOKEN=tu_token_del_bot_aqui
 DISCORD_CLIENT_ID=tu_client_id_aqui
 DISCORD_CLIENT_SECRET=tu_client_secret_aqui
-DATABASE_URL=mysql://root:tu_password@localhost:3306/botspotsasd
+DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres"
 BOT_PREFIX=!
 NODE_ENV=development
 ```
@@ -206,17 +112,17 @@ NODE_ENV=development
 ### 4.2 Backend
 
 ```powershell
-cd ..\web
+cd ../web
 copy .env.example .env
 ```
 
 Edita `web/.env`:
 
-```
+```env
 DISCORD_CLIENT_ID=tu_client_id_aqui
 DISCORD_CLIENT_SECRET=tu_client_secret_aqui
 DISCORD_REDIRECT_URI=http://localhost:3001/api/auth/callback
-DATABASE_URL=mysql://root:tu_password@localhost:3306/botspotsasd
+DATABASE_URL="postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres"
 JWT_SECRET=genera_un_string_aleatorio_largo_aqui
 SESSION_SECRET=otro_string_aleatorio_largo_aqui
 FRONTEND_URL=http://localhost:5173
@@ -233,7 +139,7 @@ copy .env.example .env
 
 Edita `web/client/.env`:
 
-```
+```env
 VITE_API_URL=http://localhost:3001
 VITE_DISCORD_CLIENT_ID=tu_client_id_aqui
 ```
@@ -245,7 +151,7 @@ Abre **3 ventanas de PowerShell separadas**:
 ### Ventana 1 - Bot
 
 ```powershell
-cd C:\Users\Usuario\Downloads\BotSpotSASD\bot
+cd bot
 npm run dev
 ```
 
@@ -254,7 +160,7 @@ Deberías ver: "✅ Bot conectado como TuBot#1234"
 ### Ventana 2 - Backend
 
 ```powershell
-cd C:\Users\Usuario\Downloads\BotSpotSASD\web
+cd web
 npm run dev:server
 ```
 
@@ -263,7 +169,7 @@ Deberías ver: "🚀 Servidor ejecutándose en http://localhost:3001"
 ### Ventana 3 - Frontend
 
 ```powershell
-cd C:\Users\Usuario\Downloads\BotSpotSASD\web\client
+cd web/client
 npm run dev
 ```
 
@@ -279,16 +185,17 @@ Deberías ver: "Local: http://localhost:5173"
 
 ## Solución de Problemas Comunes
 
-### Error: Cannot find module 'discord.js'
+### Error: Cannot find module 'pg'
 ```powershell
 cd bot
-npm install
+npm install pg
 ```
+(O en la carpeta `web` si el error es del servidor)
 
-### Error: ECONNREFUSED al conectar a MySQL
-- Verifica que MySQL esté corriendo
-- Verifica la contraseña en DATABASE_URL
-- Verifica el puerto (3306 por defecto)
+### Error de conexión a la base de datos
+- Verifica que la `DATABASE_URL` sea correcta y empiece con `postgresql://`.
+- Asegúrate de que la contraseña en la URL no tenga caracteres especiales que rompan el formato (si los tiene, deben estar codificados en URL, ej: `%20` para espacios).
+- Verifica que tu base de datos en Supabase no esté pausada.
 
 ### Error: Invalid token
 - Verifica que copiaste correctamente el token del bot
@@ -296,17 +203,5 @@ npm install
 
 ### El bot no responde a comandos
 - Verifica que el bot tenga permisos en tu servidor
-- Verifica que "Message Content Intent" esté activado
+- Verifica que "Message Content Intent" esté activado en el portal de desarrolladores
 - Espera unos minutos para que Discord registre los comandos
-
-### Error de CORS en el frontend
-- Verifica que FRONTEND_URL en el backend apunte a http://localhost:5173
-- Verifica que VITE_API_URL en el frontend apunte a http://localhost:3001
-
-## Siguientes Pasos
-
-- Lee la documentación de uso en README.md
-- Personaliza los mensajes de bienvenida
-- Configura la automoderación
-- Crea tus primeros formularios
-- Invita más administradores

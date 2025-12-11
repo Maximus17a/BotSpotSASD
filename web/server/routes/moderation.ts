@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { checkGuildPermissions } from '../middleware/permissions';
 import { query } from '../utils/database';
 
@@ -56,11 +56,12 @@ router.get('/:guildId/users/:userId', authenticateToken, checkGuildPermissions, 
 router.post('/:guildId/warn', authenticateToken, checkGuildPermissions, async (req, res) => {
   const { guildId } = req.params;
   const { userId, reason } = req.body;
+  const authReq = req as AuthRequest;
 
   try {
     await query(
       'INSERT INTO userModerations (guildId, userId, type, reason, moderatorId) VALUES (?, ?, ?, ?, ?)',
-      [guildId, userId, 'warn', reason, req.session.user?.id]
+      [guildId, userId, 'warn', reason, authReq.user?.id]
     );
 
     res.json({ success: true });
@@ -74,11 +75,12 @@ router.post('/:guildId/warn', authenticateToken, checkGuildPermissions, async (r
 router.post('/:guildId/ban', authenticateToken, checkGuildPermissions, async (req, res) => {
   const { guildId } = req.params;
   const { userId, reason } = req.body;
+  const authReq = req as AuthRequest;
 
   try {
     await query(
       'INSERT INTO userModerations (guildId, userId, type, reason, moderatorId) VALUES (?, ?, ?, ?, ?)',
-      [guildId, userId, 'ban', reason, req.session.user?.id]
+      [guildId, userId, 'ban', reason, authReq.user?.id]
     );
 
     res.json({ success: true });
@@ -92,11 +94,12 @@ router.post('/:guildId/ban', authenticateToken, checkGuildPermissions, async (re
 router.post('/:guildId/kick', authenticateToken, checkGuildPermissions, async (req, res) => {
   const { guildId } = req.params;
   const { userId, reason } = req.body;
+  const authReq = req as AuthRequest;
 
   try {
     await query(
       'INSERT INTO userModerations (guildId, userId, type, reason, moderatorId) VALUES (?, ?, ?, ?, ?)',
-      [guildId, userId, 'kick', reason, req.session.user?.id]
+      [guildId, userId, 'kick', reason, authReq.user?.id]
     );
 
     res.json({ success: true });

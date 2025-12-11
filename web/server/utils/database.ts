@@ -1,18 +1,24 @@
-import mysql from 'mysql2/promise';
+import { Pool } from 'pg';
 
-let connection: mysql.Connection | null = null;
+let pool: Pool | null = null;
 
-export async function getConnection(): Promise<mysql.Connection> {
-  if (!connection) {
-    connection = await mysql.createConnection(process.env.DATABASE_URL || '');
+export function getPool(): Pool {
+  if (!pool) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+    });
   }
-  return connection;
+  return pool;
 }
 
 export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> {
-  const conn = await getConnection();
-  const [rows] = await conn.execute(sql, params);
-  return rows as T[];
+  const p = getPool();
+  // Convert MySQL style parameters (?) to PostgreSQL style ($1, $2, ...)
+  let paramIndex = 1;
+  const pgSql = sql.replace(/\?/g, () => `$${paramIndex++}`);
+  
+  const { rows } = await p.query(pgSql, params);
+  return rows;
 }
 
 export async function queryOne<T = any>(sql: string, params?: any[]): Promise<T | null> {

@@ -14,7 +14,7 @@ export async function addWarn(
 
   // Check for auto-ban
   const warns = await query<any>(
-    'SELECT COUNT(*) as count FROM userModerations WHERE guildId = ? AND userId = ? AND type = "warn"',
+    'SELECT COUNT(*) as count FROM userModerations WHERE guildId = ? AND userId = ? AND type = \'warn\'',
     [guildId, userId]
   );
 
@@ -49,7 +49,7 @@ export async function addKick(
 
 export async function getUserWarns(guildId: string, userId: string): Promise<number> {
   const result = await query<any>(
-    'SELECT COUNT(*) as count FROM userModerations WHERE guildId = ? AND userId = ? AND type = "warn"',
+    'SELECT COUNT(*) as count FROM userModerations WHERE guildId = ? AND userId = ? AND type = \'warn\'',
     [guildId, userId]
   );
   return result[0].count;

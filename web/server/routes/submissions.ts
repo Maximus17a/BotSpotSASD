@@ -1,5 +1,5 @@
 import express from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { checkGuildPermissions } from '../middleware/permissions';
 import { query } from '../utils/database';
 
@@ -38,11 +38,12 @@ router.get('/:guildId', authenticateToken, checkGuildPermissions, async (req, re
 // Approve a submission
 router.post('/:submissionId/approve', authenticateToken, async (req, res) => {
   const { submissionId } = req.params;
+  const authReq = req as AuthRequest;
 
   try {
     await query(
       'UPDATE formSubmissions SET status = ?, reviewedBy = ?, reviewedAt = NOW() WHERE id = ?',
-      ['approved', req.session.user?.id, submissionId]
+      ['approved', authReq.user?.id, submissionId]
     );
 
     res.json({ success: true });
@@ -55,11 +56,12 @@ router.post('/:submissionId/approve', authenticateToken, async (req, res) => {
 // Reject a submission
 router.post('/:submissionId/reject', authenticateToken, async (req, res) => {
   const { submissionId } = req.params;
+  const authReq = req as AuthRequest;
 
   try {
     await query(
       'UPDATE formSubmissions SET status = ?, reviewedBy = ?, reviewedAt = NOW() WHERE id = ?',
-      ['rejected', req.session.user?.id, submissionId]
+      ['rejected', authReq.user?.id, submissionId]
     );
 
     res.json({ success: true });

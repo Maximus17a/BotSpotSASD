@@ -96,7 +96,7 @@ async function addWarn(
 
   // Check if user has 3 or more warns
   const warns = await query<any>(
-    'SELECT COUNT(*) as count FROM userModerations WHERE guildId = ? AND userId = ? AND type = "warn"',
+    'SELECT COUNT(*) as count FROM userModerations WHERE guildId = ? AND userId = ? AND type = \'warn\'',
     [guildId, userId]
   );
 
