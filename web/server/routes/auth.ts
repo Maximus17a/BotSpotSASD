@@ -1,5 +1,6 @@
 import express from 'express';
 import axios from 'axios';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
 import jwt from 'jsonwebtoken';
 
 const router = express.Router();
@@ -64,9 +65,9 @@ router.get('/callback', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    // Store access token in session for later use
-    req.session.accessToken = access_token;
-    req.session.user = user;
+    // No es necesario almacenar en la sesión si usamos JWT para /me
+    // req.session.accessToken = access_token;
+    // req.session.user = user;
 
     // Redirect to frontend with token
     res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${token}`);
@@ -77,22 +78,16 @@ router.get('/callback', async (req, res) => {
 });
 
 // Get current user
-router.get('/me', async (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: 'No autorizado' });
-  }
-
-  res.json(req.session.user);
+router.get('/me', authenticateToken, async (req, res) => {
+  // El middleware authenticateToken ya ha verificado el JWT y adjuntado el usuario a req.user
+  res.json((req as AuthRequest).user);
 });
 
 // Logout
 router.post('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ error: 'Error al cerrar sesión' });
-    }
-    res.json({ success: true });
-  });
+  // Con la autenticación basada en JWT, el logout es simplemente eliminar el token del lado del cliente.
+  // No se requiere acción en el servidor, pero se mantiene la ruta para consistencia.
+  res.json({ success: true });
 });
 
 export default router;
